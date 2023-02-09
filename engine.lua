@@ -2702,6 +2702,9 @@ function Stack.check_matches(self)
         chain_bonus = 0
       end
       self.score = self.score + score_chain_TA[chain_bonus]
+      if chain_bonus > 0 and not is_chain then
+        self.analytic:register_bonus_match(self.chain_counter)
+      end
     end
     if ((combo_size > 3) or is_chain) then
       local stop_time

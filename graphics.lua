@@ -898,6 +898,44 @@ function Stack.render(self)
       end
     end
   
+    if self.match.mode == "time" or self.match.mode == "endless" then
+      -- Clean up the bonus match data so we only show cards up to the highest level where a bonus match was made
+      local bonusMatchData = {}
+      local bonus_above_limit = analytic:compute_above_bonus_card_limit()
+    
+      for i = 2, themes[config.theme].chainCardLimit, 1 do
+        if not analytic.data.bonus_matches[i] then
+          bonusMatchData[i] = 0
+        else
+          bonusMatchData[i] = analytic.data.bonus_matches[i]
+        end
+      end
+      table.insert(bonusMatchData, bonus_above_limit)
+      for i = #bonusMatchData, 0, -1 do
+        if bonusMatchData[i] and bonusMatchData[i] == 0 then
+          bonusMatchData[i] = nil
+        else
+          break
+        end
+      end
+    
+
+      -- Draw the bonus match images
+      for i = 2, themes[config.theme].chainCardLimit + 1 do
+        local bonus_amount = bonusMatchData[i]
+        if bonus_amount and bonus_amount > 0 then
+          local cardImage = themes[config.theme].images.IMG_cards[true][i]
+          if cardImage == nil then
+            cardImage = themes[config.theme].images.IMG_cards[true][0]
+          end
+          icon_width, icon_height = cardImage:getDimensions()
+          draw(cardImage, x / GFX_SCALE, y / GFX_SCALE, 0, iconSize / icon_width, iconSize / icon_height)
+          gprintf(bonus_amount, x + iconToTextSpacing, y + 0, canvas_width, "left", nil, 1, fontIncrement)
+          y = y + nextIconIncrement
+        end
+      end
+    end
+
     -- Clean up the combo data so we only show combos up to the highest combo the user has done
     local comboData = shallowcpy(analytic.data.used_combos)
   

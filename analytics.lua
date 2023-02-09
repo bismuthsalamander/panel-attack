@@ -14,6 +14,8 @@ local function create_blank_data()
     swap_count = 0,
     -- sparse dictionary with a count of each chain reached, mystery chains are recorded as whatever chain they were, 1 is obviously meaningless
     reached_chains = {},
+    -- sparse dictionary with a count of the chain level for bonus match created; 1 is obviously meaningless
+    bonus_matches = {},
     -- sparse dictionary with a count of each combo reached, 1 to 3 being meaningless
     used_combos = {}
   }
@@ -45,6 +47,7 @@ local function analytic_clear(analytic)
   analytic.move_count = 0
   analytic.swap_count = 0
   analytic.reached_chains = {}
+  analytic.bonus_matches = {}
   analytic.used_combos = {}
 end
 
@@ -62,6 +65,17 @@ local function compute_above_chain_card_limit(analytic)
     end
   end
   return chain_above_limit
+end
+
+local function compute_above_bonus_card_limit(analytic)
+  --computing bonus match ? count
+  local bonus_above_limit = 0
+  for k, v in pairs(analytic.bonus_matches) do
+    if k > themes[config.theme].chainCardLimit then
+      bonus_above_limit = bonus_above_limit + v
+    end
+  end
+  return bonus_above_limit
 end
 
 local function refresh_sent_garbage_lines(analytic)
@@ -97,6 +111,15 @@ function maxChainReached(data)
     maxChain = math.max(index, maxChain)
   end
   return maxChain
+end
+
+--TODO: cleanup all functions in this file to be object oriented and not global
+function maxBonusMatch(data)
+  local maxBonus = 0
+  for index, _ in pairs(data.bonus_matches) do
+    maxBonus = math.max(index, maxBonus)
+  end
+  return maxBonus
 end
 
 -- this is a function that exists to address issue https://github.com/panel-attack/panel-attack/issues/609
@@ -175,6 +198,13 @@ local function output_pretty_analytics()
         text = text .. "\t" .. analytic.reached_chains[j] .. " chain(s) have ended at length " .. j .. "\n"
       end
     end
+    text = text .. "Bonus matches:\n"
+    local maxChain = maxBonusMatch(analytic)
+    for j = 2, maxChain do
+      if analytic.bonus_matches[j] ~= nil then
+        text = text .. "\t" .. analytic.bonus_matches[j] .. " bonus matches at chain length " .. j .. "\n"
+      end
+    end
     text = text .. "\n\n"
   end
   pcall(
@@ -205,6 +235,10 @@ end
 
 function AnalyticsInstance.compute_above_chain_card_limit(self)
   return compute_above_chain_card_limit(self.data)
+end
+
+function AnalyticsInstance.compute_above_bonus_card_limit(self)
+  return compute_above_bonus_card_limit(self.data)
 end
 
 function AnalyticsInstance.data_update_list(self)
@@ -241,6 +275,17 @@ function AnalyticsInstance.register_chain(self, size)
       analytic.reached_chains[size] = analytic.reached_chains[size] + 1
     end
     analytic.sent_garbage_lines = analytic.sent_garbage_lines + (size - 1)
+  end
+end
+
+function AnalyticsInstance.register_bonus_match(self, size)
+  local analytics_filters = self:data_update_list()
+  for _, analytic in pairs(analytics_filters) do
+    if not analytic.bonus_matches[size] then
+      analytic.bonus_matches[size] = 1
+    else
+      analytic.bonus_matches[size] = analytic.bonus_matches[size] + 1
+    end
   end
 end
 
